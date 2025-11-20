@@ -69,10 +69,10 @@ python src/sps_to_fits.py -s path/to/input.sps -d path/to/output_folder --show
 ```
 
 | Flag                | Type  | Default      | Description                               |
-| ------------------- | ----- | ------------ | ----------------------------------------- |
-| `-s, --source`      | `str` | **required** | Path to input SPS file                    |
+|---------------------| ----- | ------------ |-------------------------------------------|
+| `-s, --source`      | `str` | **required** | Path to directory of SPS file             |
 | `-d, --destination` | `str` | `.`          | Output directory (default current folder) |
-| `--show`            | flag  | False        | Show spectrogram plots after conversion   |
+| `-o --output`       | flag  | False        | Show spectrogram plots after conversion   |
 
 ### Dropbox Sync Tool
 ```bash

@@ -6,6 +6,7 @@ from typing import Any, Tuple
 import matplotlib.pyplot as plt
 from astropy.io import fits
 import argparse
+import datetime
 
 def get_args()->Tuple[str, str, bool]:
     """
@@ -19,7 +20,7 @@ def get_args()->Tuple[str, str, bool]:
         "-s", "--source",
         required=True,
         type=str,
-        help="Path to input SPS file"
+        help="Path to the directory with all SPS files"
     )
     parser.add_argument(
         "-d", "--destination",
@@ -37,9 +38,9 @@ def get_args()->Tuple[str, str, bool]:
 
     # Check source file
     if not os.path.exists(args.source):
-        raise RuntimeError(f"ERROR: SPS file not found: {args.source}")
-    if not os.path.isfile(args.source):
-        raise RuntimeError(f"ERROR: Source path is not a file: {args.source}")
+        raise RuntimeError(f"ERROR: SPS directory not found: {args.source}")
+    if not os.path.isdir(args.source):
+        raise RuntimeError(f"ERROR: Source path is not a dir: {args.source}")
 
     # Check destination folder
     if not os.path.exists(args.destination):
@@ -51,6 +52,19 @@ def get_args()->Tuple[str, str, bool]:
         raise RuntimeError(f"ERROR: Destination path is not a directory: {args.destination}")
 
     return args.source, args.destination, args.output
+
+def get_sps_in_directory(directory_path: str)->list:
+    """
+    Creates a list of all the sps files in the given directory.
+    :param directory_path: The directory to search for sps files
+    :return: A list of all the sps files in the given directory
+    """
+    sps_files = []
+    for root, dirs, files in os.walk(directory_path):
+        for f in files:
+            if f.lower().endswith('.sps'):
+                sps_files.append(os.path.join(root, f))
+    return sps_files
 
 def extract_bytes(mapped_file: mmap.mmap, n_bytes: int, start_offset: int=0)->bytes:
     """
@@ -114,7 +128,6 @@ def extract_sps_header(mapped_file: mmap.mmap)->dict:
         (151,      "Channels",  "Int16",    2),
         (153,      "NoteLength","Int32",    4),
     ]
-
     sps_header = {}
 
     for pos, name, data_type, size in fields:
@@ -143,7 +156,7 @@ def read_sps_data(mapped_file: mmap.mmap, start_byte: int)->list:
     sweep_data = []
     current_sweep = []
     try:
-        while current_byte < mapped_file.size() - 1: #exclude end of file delimiter
+        while current_byte < mapped_file.size() - 1: # Exclude end of file delimiter
             byte_val = interpret_bytes(extract_bytes(mapped_file, 2, current_byte), "UInt16")
             if byte_val == end_delimiter: # Reached the End-of-Sweep delimiter
                 sweep_data.append(current_sweep)
@@ -154,32 +167,50 @@ def read_sps_data(mapped_file: mmap.mmap, start_byte: int)->list:
             current_byte += 2
     except Exception as e:
         print(f"An error occurred: {e}, please tell whoever wrote this to lock in")
-        exit(1)
+        return []
 
     return sweep_data
 
-def convert_sps_fits(sweep_data: np.ndarray, file_name, destination_dir: str)->str:
+def sps_to_datetime(value):
+    """
+    Takes a Microsoft Date and converts it to a UTC timestamp
+    :param value: The Date to convert
+    """
+    # SPS epoch: 1900-01-03
+    epoch = datetime.datetime(1900, 1, 3)
+    delta = datetime.timedelta(days=float(value))
+    return (epoch + delta).isoformat()
+
+def convert_sps_fits(sweep_data: np.ndarray, sps_header: dict, file_name: str, destination_dir: str)->str:
     """
     Taking the sweep data from the sps file and converting it into a fits file.
     :param sweep_data: The numpy array of the sweep data
+    :param sps_header: Dictionary with the header values of the sps file
+    :param file_name: The name of the input file
+    :param destination_dir: The destination directory
     :return: The name of the new FITS file
     """
     # Create individual hdu
     hdu = fits.PrimaryHDU(data=sweep_data)
-    hdu.header['OBJECT'] = 'RSS Spectrogram'
-    hdu.header['COMMENT'] = 'Created from SPS sweep data'
-    hdu.header['BUNIT'] = 'Intensity'
+    hdu.header['OBJECT']    = 'RSS Spectrogram'
+    hdu.header['COMMENT']   = 'Created from SPS sweep data'
+    hdu.header['BUNIT']     = 'Intensity'
+    hdu.header['OBS-LAT']   = sps_header['Latitude']
+    hdu.header['OBS-LONG']  = sps_header['Longitude']
+    hdu.header['SOURCE']    = sps_header['Name']
+    hdu.header['DATE-OBS']  = sps_to_datetime(sps_header['Start'])
+    hdu.header['DATE-END']  = sps_to_datetime(sps_header['End'])
 
     # Create HDU list
     hdu_list = fits.HDUList([hdu])
 
     # Create the Fits file
-    file_path = f'{destination_dir}/{file_name}.fits'
+    file_path = f'{destination_dir}/{file_name[:-4]}.fits'
     hdu_list.writeto(file_path, overwrite=True)
 
     return file_path
 
-def plot_fits_spectrogram(fits_filename: str):
+def plot_fits_spectrogram(fits_filename: str)->None:
     """
     Plots the spectrogram of a fits file.
     :param fits_filename: Name of the FITS file to display
@@ -199,7 +230,7 @@ def plot_fits_spectrogram(fits_filename: str):
         plt.colorbar(label='Intensity')
         plt.show()
 
-def plot_sps_spectrogram(sweep_array):
+def plot_sps_spectrogram(sweep_array: np.ndarray)->None:
     """
     Plots the spectrogram of a fits file.
     :param sweep_array: The numpy array of the sweep data
@@ -218,23 +249,42 @@ def plot_sps_spectrogram(sweep_array):
     plt.show()
 
 def main():
-    file_path, dest_dir, show = get_args()
-    with open(file_path, "rb") as file:
-        mf = mmap.mmap(file.fileno(), 0, prot=mmap.PROT_READ)
+    src_dir, dest_dir, show = get_args()
+    sps_files = get_sps_in_directory(src_dir)
 
-        sps_header = extract_sps_header(mf)
+    print(f"Converting {len(sps_files)} sps files...")
 
-        data_head = sps_header["NoteLength"] + 157 - 1
+    count = 0
+    for file_path in sps_files:
+        with open(file_path, "rb") as file:
+            #1. Memory Map File
+            mf = mmap.mmap(file.fileno(), 0, prot=mmap.PROT_READ)
 
-        sweep_data = read_sps_data(mf, data_head)
+            #2. Extract the SPS header
+            sps_header = extract_sps_header(mf)
 
-        sweep_array = np.array(sweep_data, dtype=np.uint16)
+            #3. Get the starting byte of actual data
+            data_head = sps_header["NoteLength"] + 157 - 1
 
-        fits_path = convert_sps_fits(sweep_array, os.path.basename(file_path), dest_dir)
+            #4. Read in the data
+            sweep_data = read_sps_data(mf, data_head)
+            if len(sweep_data) == 0: #If data reading went wrong skip this file
+                continue
 
-        if show:
-            plot_sps_spectrogram(sweep_array)
-            plot_fits_spectrogram(fits_path)
+            #5. Convert to numpy array
+            sweep_array = np.array(sweep_data, dtype=np.uint16)
+
+            #6. Convert to a fits file!
+            fits_path = convert_sps_fits(sweep_array, sps_header, os.path.basename(file_path), dest_dir)
+
+            #7. Display the results (optional)
+            count += 1
+            print(f"\tConverted {count}/{len(sps_files)} sps files...")
+            if show:
+                plot_sps_spectrogram(sweep_array)
+                plot_fits_spectrogram(fits_path)
+
+    print(f"Complete!")
 
 if __name__ =='__main__':
     main()
