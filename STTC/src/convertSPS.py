@@ -29,7 +29,7 @@ def get_args()->Tuple[str, str, bool]:
         help="Path to output directory (default: current directory)"
     )
     parser.add_argument(
-        "-s", "--show",
+        "-o", "--output",
         action="store_true",
         help="If set true will output the spectrogram plots"
     )
@@ -50,7 +50,7 @@ def get_args()->Tuple[str, str, bool]:
     elif not os.path.isdir(args.destination):
         raise RuntimeError(f"ERROR: Destination path is not a directory: {args.destination}")
 
-    return args.source, args.destination, args.show
+    return args.source, args.destination, args.output
 
 def extract_bytes(mapped_file: mmap.mmap, n_bytes: int, start_offset: int=0)->bytes:
     """
@@ -174,9 +174,10 @@ def convert_sps_fits(sweep_data: np.ndarray, file_name, destination_dir: str)->s
     hdu_list = fits.HDUList([hdu])
 
     # Create the Fits file
-    hdu_list.writeto(f'{destination_dir}/{file_name}.fits', overwrite=True)
+    file_path = f'{destination_dir}/{file_name}.fits'
+    hdu_list.writeto(file_path, overwrite=True)
 
-    return 'test.fits'
+    return file_path
 
 def plot_fits_spectrogram(fits_filename: str):
     """
@@ -229,11 +230,11 @@ def main():
 
         sweep_array = np.array(sweep_data, dtype=np.uint16)
 
-        fits_name = convert_sps_fits(sweep_array, os.path.basename(file_path), dest_dir)
+        fits_path = convert_sps_fits(sweep_array, os.path.basename(file_path), dest_dir)
 
         if show:
             plot_sps_spectrogram(sweep_array)
-            plot_fits_spectrogram(fits_name)
+            plot_fits_spectrogram(fits_path)
 
 if __name__ =='__main__':
     main()

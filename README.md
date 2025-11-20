@@ -43,6 +43,8 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/{yourusername}/FileTools.git
 cd utility-tools
+```
+```bash
 pip install -r requirements.txt
 ```
 
