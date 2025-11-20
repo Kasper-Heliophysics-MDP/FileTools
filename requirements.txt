@@ -1,0 +1,8 @@
+# SPS-to-FITS Converter
+numpy
+matplotlib
+astropy
+
+# Dropbox Sync Tool
+dropbox
+python-dotenv

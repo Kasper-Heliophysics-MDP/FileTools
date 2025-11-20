@@ -1,0 +1,10 @@
+.venv/
+venv/
+.DS_Store
+*.xml
+*.iml
+.env
+*.sps
+*.fits
+.idea/
+__pycache__/
