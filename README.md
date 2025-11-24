@@ -73,13 +73,15 @@ python src/sps_to_fits.py -s path/to/input.sps -d path/to/output_folder --show
 | `-s, --source`      | `str` | **required** | Path to directory of SPS file             |
 | `-d, --destination` | `str` | `.`          | Output directory (default current folder) |
 | `-o --output`       | flag  | False        | Show spectrogram plots after conversion   |
+| `-n --output`       | flag  | False        | Export the data as a numpy file           |
+| `-c --output`       | flag  | False        | Export the data as a csv file             |
 
 ### Dropbox Sync Tool
 ```bash
 python src/dropbox_sync.py -p ./files
 ```
 | Flag            | Type      | Default      | Description                                                 |
-| --------------- | --------- | ------------ | ----------------------------------------------------------- |
+|-----------------| --------- | ------------ |-------------------------------------------------------------|
 | `-p, --path`    | `str`     | **required** | Path to the local folder where files will be synced         |
 | `-r, --random`  | `float`   | 1.0          | Probability of files being downloaded (0.0–1.0]             |
 | `-o, --out`     | flag      | False        | Creates an output `.out` listing all newly downloaded files |
@@ -87,6 +89,9 @@ python src/dropbox_sync.py -p ./files
 | `-f, --flat`    | flag      | False        | Downloads all files into a flat structure (no subfolders)   |
 | `-e, --exclude` | list[str] | []           | List of file extensions to exclude (e.g. `.png .mp4`)       |
 | `-d, --dry-run` | flag      | False        | Simulates the sync without downloading any files            |
+| `-w, --want`    | list[str]      | []        | List of file extensions to include (e.g. `.sps .csv`)       |
+
+`--want` and `--exclude` can't be used in tandem.
 
 Examples: 
 ```bash

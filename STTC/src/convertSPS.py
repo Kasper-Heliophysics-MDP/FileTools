@@ -8,7 +8,7 @@ from astropy.io import fits
 import argparse
 import datetime
 
-def get_args()->Tuple[str, str, bool]:
+def get_args()->Tuple[str, str, bool, bool, bool]:
     """
     Parse command-line arguments for converter
     :return str: The source filename and destination folder
@@ -34,6 +34,16 @@ def get_args()->Tuple[str, str, bool]:
         action="store_true",
         help="If set true will output the spectrogram plots"
     )
+    parser.add_argument(
+        "-n", "--numpy",
+        action="store_true",
+        help="If set true will output the spectrogram plots as .npy files"
+    )
+    parser.add_argument(
+        "-c", "--csv",
+        action="store_true",
+        help="If set true will output the spectrogram plots as .csv files"
+    )
     args = parser.parse_args()
 
     # Check source file
@@ -51,7 +61,7 @@ def get_args()->Tuple[str, str, bool]:
     elif not os.path.isdir(args.destination):
         raise RuntimeError(f"ERROR: Destination path is not a directory: {args.destination}")
 
-    return args.source, args.destination, args.output
+    return args.source, args.destination, args.output, args.numpy, args.csv
 
 def get_sps_in_directory(directory_path: str)->list:
     """
@@ -181,13 +191,15 @@ def sps_to_datetime(value):
     delta = datetime.timedelta(days=float(value))
     return (epoch + delta).isoformat()
 
-def convert_sps_fits(sweep_data: np.ndarray, sps_header: dict, file_name: str, destination_dir: str)->str:
+def convert_sps_fits(sweep_data: np.ndarray, sps_header: dict, file_name: str, destination_dir: str,
+                     as_numpy: bool, as_csv: bool)->str:
     """
     Taking the sweep data from the sps file and converting it into a fits file.
     :param sweep_data: The numpy array of the sweep data
     :param sps_header: Dictionary with the header values of the sps file
     :param file_name: The name of the input file
     :param destination_dir: The destination directory
+    :param as_numpy: Whether to write the sweep data as a numpy array
     :return: The name of the new FITS file
     """
     # Create individual hdu
@@ -205,8 +217,15 @@ def convert_sps_fits(sweep_data: np.ndarray, sps_header: dict, file_name: str, d
     hdu_list = fits.HDUList([hdu])
 
     # Create the Fits file
-    file_path = f'{destination_dir}/{file_name[:-4]}.fits'
-    hdu_list.writeto(file_path, overwrite=True)
+    file_path = f'{destination_dir}/{file_name[:-4]}'
+    if as_csv: # CSV
+        a = np.asarray(sweep_data)
+        np.savetxt(f"{file_path}.csv", a, delimiter=",")
+    if as_numpy: # Numpy
+        np.save(f'{file_path}.npy', sweep_data)
+    if not as_csv and not as_numpy: # Fits
+        file_path = f'{file_path}.fits'
+        hdu_list.writeto(file_path, overwrite=True)
 
     return file_path
 
@@ -249,7 +268,7 @@ def plot_sps_spectrogram(sweep_array: np.ndarray)->None:
     plt.show()
 
 def main():
-    src_dir, dest_dir, show = get_args()
+    src_dir, dest_dir, show, as_numpy, as_csv = get_args()
     sps_files = get_sps_in_directory(src_dir)
 
     print(f"Converting {len(sps_files)} sps files...")
@@ -274,13 +293,13 @@ def main():
             #5. Convert to numpy array
             sweep_array = np.array(sweep_data, dtype=np.uint16)
 
-            #6. Convert to a fits file!
-            fits_path = convert_sps_fits(sweep_array, sps_header, os.path.basename(file_path), dest_dir)
+            #6. Convert to a fits file! (or numpy if specified)
+            fits_path = convert_sps_fits(sweep_array, sps_header, os.path.basename(file_path), dest_dir, as_numpy, as_csv)
 
             #7. Display the results (optional)
             count += 1
             print(f"\tConverted {count}/{len(sps_files)} sps files...")
-            if show:
+            if show and not as_numpy and not as_csv:
                 plot_sps_spectrogram(sweep_array)
                 plot_fits_spectrogram(fits_path)
 

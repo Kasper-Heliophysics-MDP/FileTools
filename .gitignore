@@ -7,4 +7,5 @@ venv/
 *.sps
 *.fits
 .idea/
+*.npy
 __pycache__/
