@@ -65,7 +65,7 @@ You can generate a token at [Dropbox Developers](https://www.dropbox.com/develop
 
 ### SPS-to-Fits Converter
 ```bash
-python src/sps_to_fits.py -s path/to/input.sps -d path/to/output_folder --show
+python terminal_src/sps_to_fits.py -s path/to/input.sps -d path/to/output_folder --show
 ```
 
 | Flag                | Type  | Default      | Description                               |
@@ -78,7 +78,7 @@ python src/sps_to_fits.py -s path/to/input.sps -d path/to/output_folder --show
 
 ### Dropbox Sync Tool
 ```bash
-python src/dropbox_sync.py -p ./files
+python terminal_src/dropbox_sync.py -p ./files
 ```
 | Flag            | Type      | Default      | Description                                                 |
 |-----------------| --------- | ------------ |-------------------------------------------------------------|
@@ -96,20 +96,20 @@ python src/dropbox_sync.py -p ./files
 Examples: 
 ```bash
 # Normal sync
-python src/dropbox_sync.py -p ./files
+python terminal_src/dropbox_sync.py -p ./files
 
 # Sync but skip .png and .mp4 files
-python src/dropbox_sync.py -p ./files -e .png .mp4
+python terminal_src/dropbox_sync.py -p ./files -e .png .mp4
 
 # Sync with logging
-python src/dropbox_sync.py -p ./files --log
+python terminal_src/dropbox_sync.py -p ./files --log
 
 # Simulate without downloading
-python src/dropbox_sync.py -p ./files --dry-run
+python terminal_src/dropbox_sync.py -p ./files --dry-run
 
 # Flat structure download
-python src/dropbox_sync.py -p ./files --flat
+python terminal_src/dropbox_sync.py -p ./files --flat
 
 # Download files with 50% probability
-python src/dropbox_sync.py -p ./files -r 0.5
+python terminal_src/dropbox_sync.py -p ./files -r 0.5
 ```
