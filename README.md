@@ -14,7 +14,6 @@ This repository contains two Python file tools to assist in retreiving and conve
 - [Usage](#usage)
   - [SPS-to-FITS Converter](#sps-to-fits-converter)
   - [Dropbox Sync Tool](#dropbox-sync-tool)
-- [Requirements](#requirements)
 
 ---
 
@@ -41,7 +40,7 @@ This repository contains two Python file tools to assist in retreiving and conve
 Clone the repository and install dependencies:
 
 ```bash
-git clone https://github.com/{yourusername}/FileTools.git
+git clone https://github.com/Kasper-Heliophysics-MDP/FileTools.git
 cd utility-tools
 ```
 ```bash
